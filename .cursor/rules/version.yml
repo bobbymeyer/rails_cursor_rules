@@ -1,0 +1,24 @@
+version: 1.0.0
+compatibility:
+  ruby:
+    min_version: 3.2.0
+    max_version: 3.3.0
+  rails:
+    min_version: 8.0.0
+    max_version: 8.1.0
+  required_gems:
+    - name: git
+      min_version: 2.30.0
+    - name: rubocop
+      min_version: 1.50.0
+    - name: minitest
+      min_version: 5.18.0
+  required_system_tools:
+    - name: git
+      min_version: 2.30.0
+    - name: bundle
+      min_version: 2.4.0
+  breaking_changes:
+    - version: 1.0.0
+      description: Initial release
+      migration_guide: docs/migration/1.0.0.md 

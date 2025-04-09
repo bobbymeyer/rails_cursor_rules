@@ -1,0 +1,243 @@
+#!/usr/bin/env ruby
+
+require 'fileutils'
+require 'yaml'
+require 'digest'
+require 'open3'
+
+class RulesSetup
+  class SetupError < StandardError; end
+
+  def initialize
+    @cursor_dir = '.cursor'
+    @rules_dir = File.join(@cursor_dir, 'rules')
+    @docs_dir = File.join(@cursor_dir, 'docs')
+    @bin_dir = 'bin'
+    @backup_dir = '.cursor_backup'
+  end
+
+  def setup
+    check_dependencies
+    check_git
+    initialize_submodule
+    create_directories
+    backup_existing_files
+    copy_rules
+    validate_copied_files
+    setup_git_hooks
+    setup_rake_tasks
+    make_executable
+  rescue SetupError => e
+    puts "Error: #{e.message}"
+    restore_backup if File.directory?(@backup_dir)
+    exit 1
+  end
+
+  def update
+    check_dependencies
+    update_submodule
+    validate_updates
+    apply_updates
+  rescue SetupError => e
+    puts "Error: #{e.message}"
+    restore_backup if File.directory?(@backup_dir)
+    exit 1
+  end
+
+  private
+
+  def check_dependencies
+    check_ruby_version
+    check_required_gems
+    check_system_tools
+  end
+
+  def check_ruby_version
+    required_version = '3.2.0'
+    current_version = RUBY_VERSION
+    unless Gem::Version.new(current_version) >= Gem::Version.new(required_version)
+      raise SetupError, "Ruby version #{required_version} or higher is required. Current version: #{current_version}"
+    end
+  end
+
+  def check_required_gems
+    required_gems = %w[git rubocop minitest]
+    missing_gems = required_gems.reject { |gem| Gem.loaded_specs.key?(gem) }
+    unless missing_gems.empty?
+      raise SetupError, "Missing required gems: #{missing_gems.join(', ')}"
+    end
+  end
+
+  def check_system_tools
+    required_tools = %w[git bundle]
+    missing_tools = required_tools.reject { |tool| system("which #{tool} > /dev/null 2>&1") }
+    unless missing_tools.empty?
+      raise SetupError, "Missing required system tools: #{missing_tools.join(', ')}"
+    end
+  end
+
+  def check_git
+    unless File.directory?('.git')
+      raise SetupError, "Not a git repository. Please initialize git first."
+    end
+  end
+
+  def initialize_submodule
+    return if File.directory?(@cursor_dir)
+
+    puts "Initializing rules submodule..."
+    result = system('git submodule add https://github.com/your-org/rails-omakase-rules.git .cursor')
+    raise SetupError, "Failed to add submodule" unless result
+
+    result = system('git submodule init')
+    raise SetupError, "Failed to initialize submodule" unless result
+
+    result = system('git submodule update')
+    raise SetupError, "Failed to update submodule" unless result
+  end
+
+  def update_submodule
+    puts "Updating rules submodule..."
+    result = system('git submodule update --remote .cursor')
+    raise SetupError, "Failed to update submodule" unless result
+
+    if system('git diff --cached --quiet')
+      result = system('git add .cursor')
+      raise SetupError, "Failed to stage submodule changes" unless result
+
+      result = system('git commit -m "Update rules to latest version"')
+      raise SetupError, "Failed to commit submodule changes" unless result
+    end
+  end
+
+  def create_directories
+    [@cursor_dir, @rules_dir, @docs_dir, @bin_dir].each do |dir|
+      FileUtils.mkdir_p(dir) unless Dir.exist?(dir)
+    end
+  end
+
+  def backup_existing_files
+    return unless Dir.exist?(@rules_dir) || Dir.exist?(@docs_dir) || Dir.exist?(@bin_dir)
+
+    FileUtils.rm_rf(@backup_dir) if Dir.exist?(@backup_dir)
+    FileUtils.mkdir_p(@backup_dir)
+
+    [@rules_dir, @docs_dir, @bin_dir].each do |dir|
+      next unless Dir.exist?(dir)
+      backup_path = File.join(@backup_dir, File.basename(dir))
+      FileUtils.cp_r(dir, backup_path)
+    end
+  end
+
+  def copy_rules
+    # Copy rule files from submodule
+    Dir.glob(File.join(@cursor_dir, 'rules', '*.yml')).each do |file|
+      FileUtils.cp(file, @rules_dir)
+    end
+
+    # Copy documentation
+    Dir.glob(File.join(@cursor_dir, 'docs', '*.md')).each do |file|
+      FileUtils.cp(file, @docs_dir)
+    end
+
+    # Copy enforcement scripts
+    Dir.glob(File.join(@cursor_dir, 'bin', '*')).each do |file|
+      FileUtils.cp(file, @bin_dir)
+    end
+  end
+
+  def validate_copied_files
+    # Validate YAML files
+    Dir.glob(File.join(@rules_dir, '*.yml')).each do |file|
+      begin
+        YAML.load_file(file)
+      rescue Psych::SyntaxError => e
+        raise SetupError, "Invalid YAML in #{file}: #{e.message}"
+      end
+    end
+
+    # Validate required files exist
+    required_files = [
+      File.join(@rules_dir, 'tech_stack.yml'),
+      File.join(@rules_dir, 'coding_style.yml'),
+      File.join(@rules_dir, 'development_workflow.yml')
+    ]
+
+    missing_files = required_files.reject { |file| File.exist?(file) }
+    unless missing_files.empty?
+      raise SetupError, "Missing required rule files: #{missing_files.join(', ')}"
+    end
+  end
+
+  def setup_git_hooks
+    hooks_dir = '.git/hooks'
+    FileUtils.mkdir_p(hooks_dir) unless Dir.exist?(hooks_dir)
+
+    # Copy git hooks
+    Dir.glob(File.join(@cursor_dir, 'git-hooks', '*')).each do |file|
+      hook_name = File.basename(file)
+      hook_path = File.join(hooks_dir, hook_name)
+      FileUtils.cp(file, hook_path)
+      FileUtils.chmod(0755, hook_path)
+    end
+  end
+
+  def setup_rake_tasks
+    tasks_dir = 'lib/tasks'
+    FileUtils.mkdir_p(tasks_dir) unless Dir.exist?(tasks_dir)
+
+    # Copy rake tasks
+    Dir.glob(File.join(@cursor_dir, 'lib/tasks', '*.rake')).each do |file|
+      FileUtils.cp(file, tasks_dir)
+    end
+  end
+
+  def make_executable
+    Dir.glob(File.join(@bin_dir, '*')).each do |file|
+      FileUtils.chmod(0755, file) if File.executable?(file)
+    end
+  end
+
+  def validate_updates
+    # Check compatibility with current project
+    check_ruby_version_compatibility
+    check_gem_compatibility
+    check_rails_version_compatibility
+  end
+
+  def check_ruby_version_compatibility
+    # Implementation needed
+  end
+
+  def check_gem_compatibility
+    # Implementation needed
+  end
+
+  def check_rails_version_compatibility
+    # Implementation needed
+  end
+
+  def restore_backup
+    puts "Restoring from backup..."
+    [@rules_dir, @docs_dir, @bin_dir].each do |dir|
+      backup_path = File.join(@backup_dir, File.basename(dir))
+      next unless Dir.exist?(backup_path)
+      FileUtils.rm_rf(dir)
+      FileUtils.cp_r(backup_path, dir)
+    end
+    FileUtils.rm_rf(@backup_dir)
+  end
+
+  def apply_updates
+    system('bin/enforce -p all')
+  end
+end
+
+if __FILE__ == $PROGRAM_NAME
+  setup = RulesSetup.new
+  if ARGV.include?('--update')
+    setup.update
+  else
+    setup.setup
+  end
+end 

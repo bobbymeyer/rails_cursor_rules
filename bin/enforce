@@ -1,0 +1,104 @@
+#!/usr/bin/env ruby
+
+require 'optparse'
+require 'fileutils'
+require 'git'
+require 'rubocop'
+require 'minitest/autorun'
+
+class DevelopmentEnforcer
+  def initialize
+    @git = Git.open(Dir.pwd)
+    @current_branch = @git.current_branch
+    @options = {}
+  end
+
+  def enforce_feature_request
+    return if @current_branch == 'main'
+
+    unless @current_branch.start_with?('feature/')
+      abort "Error: Branch name must start with 'feature/'. Current branch: #{@current_branch}"
+    end
+
+    if @git.status.changed.any?
+      abort "Error: Working directory is not clean. Please commit or stash changes before creating a feature branch."
+    end
+  end
+
+  def enforce_test_first
+    test_files = Dir.glob('test/**/*_test.rb')
+    implementation_files = Dir.glob('app/**/*.rb')
+
+    test_files.each do |test_file|
+      impl_file = test_file.gsub('test/', 'app/').gsub('_test.rb', '.rb')
+      if File.exist?(impl_file) && File.mtime(impl_file) > File.mtime(test_file)
+        abort "Error: Implementation file #{impl_file} was modified after test file #{test_file}"
+      end
+    end
+  end
+
+  def enforce_tests_pass
+    unless system('bundle exec rails test')
+      abort "Error: Tests are failing. Please fix tests before proceeding."
+    end
+  end
+
+  def enforce_code_quality
+    unless system('bundle exec rubocop -a')
+      abort "Error: Rubocop checks failed. Please fix style issues before proceeding."
+    end
+  end
+
+  def enforce_git_commit
+    if @git.status.changed.any?
+      abort "Error: Uncommitted changes detected. Please commit all changes before proceeding."
+    end
+
+    last_commit = @git.log.first
+    unless last_commit.message.match?(/^[A-Z].{10,}/)
+      abort "Error: Commit message must start with a capital letter and be at least 10 characters long."
+    end
+  end
+
+  def enforce_pre_merge
+    if @current_branch == 'main'
+      abort "Error: Cannot merge into main directly. Please use a feature branch."
+    end
+
+    @git.fetch
+    unless @git.branches['main'].gcommit == @git.branches[@current_branch].gcommit.parent
+      abort "Error: Branch is not up to date with main. Please rebase or merge main first."
+    end
+  end
+
+  def run_checks(phase)
+    case phase
+    when 'feature_request'
+      enforce_feature_request
+    when 'test_first'
+      enforce_test_first
+    when 'tests_pass'
+      enforce_tests_pass
+    when 'code_quality'
+      enforce_code_quality
+    when 'git_commit'
+      enforce_git_commit
+    when 'pre_merge'
+      enforce_pre_merge
+    else
+      abort "Error: Unknown phase: #{phase}"
+    end
+  end
+end
+
+options = {}
+OptionParser.new do |opts|
+  opts.banner = "Usage: bin/enforce [options]"
+
+  opts.on("-p", "--phase PHASE", "Phase to enforce") do |phase|
+    options[:phase] = phase
+  end
+end.parse!
+
+enforcer = DevelopmentEnforcer.new
+enforcer.run_checks(options[:phase]) 

@@ -1,0 +1,116 @@
+name: Rails Coding Style
+description: Enforces Rails conventions, concise code, and minimal JavaScript usage
+
+rules:
+  - name: rails_conventions
+    description: Follow Rails conventions and best practices
+    check:
+      - name: model_conventions
+        description: Follow Rails model conventions
+        rules:
+          - Use single table inheritance (STI) when appropriate
+          - Use concerns for shared model behavior
+          - Keep models focused on business logic
+          - Use Rails validations and callbacks
+          - Use scopes for common queries
+          - Use enum for status fields
+          - Use associations instead of manual joins
+
+      - name: controller_conventions
+        description: Follow Rails controller conventions
+        rules:
+          - Use standard RESTful actions
+          - Keep controllers thin
+          - Use before_action for shared logic
+          - Use strong parameters
+          - Use respond_to blocks
+          - Use flash messages for user feedback
+          - Use redirect_to with status codes
+
+      - name: view_conventions
+        description: Follow Rails view conventions
+        rules:
+          - Use partials for reusable view components
+          - Use layouts for shared view structure
+          - Use helpers for view logic
+          - Use content_for for layout customization
+          - Use form builders (Simple Form)
+          - Use I18n for text
+
+  - name: concise_code
+    description: Write concise but readable code
+    rules:
+      - name: ruby_conciseness
+        description: Write concise Ruby code
+        check:
+          - Use Ruby's built-in methods instead of custom implementations
+          - Use method chaining when it improves readability
+          - Use guard clauses instead of nested conditionals
+          - Use Ruby's safe navigation operator (&.)
+          - Use Ruby's pattern matching when appropriate
+          - Use Ruby's endless methods for simple methods
+          - Use Ruby's numbered parameters for simple blocks
+
+      - name: line_length
+        description: Keep lines short and focused
+        rules:
+          - Maximum line length: 80 characters
+          - Break long method chains into multiple lines
+          - Use parentheses for method arguments when it improves readability
+          - Use colons for hash keys (e.g., { key: value } instead of { :key => value })
+          - Only use hash rockets (=>) when keys contain spaces or special characters
+
+      - name: method_length
+        description: Keep methods short and focused
+        rules:
+          - Maximum method length: 10 lines
+          - Extract complex logic into private methods
+          - Use early returns
+          - Use descriptive method names
+
+  - name: minimal_javascript
+    description: Minimize JavaScript usage
+    rules:
+      - name: javascript_avoidance
+        description: Avoid JavaScript when possible
+        check:
+          - Use Turbo Drive for page transitions
+          - Use Turbo Frames for partial updates
+          - Use Turbo Streams for real-time updates
+          - Use Stimulus only for interactive UI elements
+          - Use CSS transitions and animations when possible
+          - Use HTML5 form validation
+          - Use CSS for hover effects and basic interactions
+
+      - name: stimulus_usage
+        description: Use Stimulus only when necessary
+        rules:
+          - Keep controllers small and focused
+          - Use data attributes for configuration
+          - Use targets instead of querySelector
+          - Use actions instead of event listeners
+          - Use values for state management
+          - Use lifecycle callbacks appropriately
+
+  - name: code_organization
+    description: Organize code following Rails conventions
+    rules:
+      - name: directory_structure
+        description: Follow Rails directory structure
+        check:
+          - Use app/models for business logic
+          - Use app/controllers for request handling
+          - Use app/views for presentation
+          - Use app/helpers for view helpers
+          - Use app/jobs for background jobs
+          - Use app/mailers for email handling
+          - Use app/channels for WebSocket handling
+
+      - name: file_organization
+        description: Organize files following Rails conventions
+        rules:
+          - One class per file
+          - Use namespacing for related functionality
+          - Keep related files close together
+          - Use descriptive file names
+          - Use consistent file naming conventions 

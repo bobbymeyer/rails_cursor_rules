@@ -1,0 +1,120 @@
+name: Development Workflow
+description: Strictly enforced TDD workflow with code quality standards
+
+workflow:
+  - name: feature_request
+    description: Receive and process feature request
+    steps:
+      - Understand the feature requirements
+      - Create a new git branch
+      - Branch naming convention: feature/[description]
+
+  - name: test_first
+    description: Write tests before implementation
+    steps:
+      - Create test file if it doesn't exist
+      - Write test for the smallest possible unit
+      - Test should fail initially (red)
+      - Test should be specific and focused
+      - Test should be readable and maintainable
+
+  - name: implementation
+    description: Implement minimal code to pass tests
+    steps:
+      - Write minimal code to pass test
+      - Run test (should pass - green)
+      - If test fails, fix implementation
+      - Repeat until test passes
+
+  - name: code_quality
+    description: Ensure code quality standards
+    steps:
+      - Run rubocop-omakase
+      - Check against project rules
+      - Refactor code if needed
+      - Ensure all tests still pass
+      - Repeat until all checks pass
+
+  - name: git_workflow
+    description: Commit and merge changes
+    steps:
+      - Stage changes
+      - Write clear commit message
+      - Commit changes
+      - Run final test suite
+      - Merge into main branch
+
+rules:
+  - name: git_branching
+    description: Git branching rules
+    check:
+      - Branch name follows convention
+      - Branch is based on latest main
+      - No direct commits to main
+      - Clean working directory before branching
+
+  - name: testing
+    description: Testing rules
+    check:
+      - Test file exists
+      - Test is written first
+      - Test is specific and focused
+      - Test is readable
+      - Test fails initially
+      - Test passes after implementation
+
+  - name: implementation
+    description: Implementation rules
+    check:
+      - Minimal code to pass test
+      - Follows Rails conventions
+      - Follows project rules
+      - No unnecessary code
+      - No duplication
+      - Clear and readable
+
+  - name: code_quality
+    description: Code quality rules
+    check:
+      - Passes rubocop-omakase
+      - Follows project rules
+      - Follows Rails conventions
+      - Follows security guidelines
+      - Follows performance guidelines
+
+  - name: git_commit
+    description: Git commit rules
+    check:
+      - Clear commit message
+      - Related changes only
+      - No commented code
+      - No debug code
+      - All tests pass
+      - All quality checks pass
+
+enforcement:
+  - name: pre_commit
+    description: Pre-commit checks
+    steps:
+      - Run test suite
+      - Run rubocop-omakase
+      - Check project rules
+      - Check security guidelines
+      - Check performance guidelines
+
+  - name: pre_merge
+    description: Pre-merge checks
+    steps:
+      - Run full test suite
+      - Run all quality checks
+      - Check branch is up to date
+      - Check no conflicts
+      - Check all requirements met
+
+  - name: post_merge
+    description: Post-merge checks
+    steps:
+      - Verify main branch
+      - Run final test suite
+      - Check deployment readiness
+      - Update documentation if needed 

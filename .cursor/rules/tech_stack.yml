@@ -1,0 +1,196 @@
+name: Rails 8 Omakase Stack
+description: Defines and enforces Rails 8 conventions and best practices
+
+stack:
+  framework: Ruby on Rails 8
+  database: PostgreSQL
+  authentication: Rails built-in authentication
+  real-time: Hotwire (Turbo + Stimulus)
+  background_jobs: Solid Queue
+  testing: Minitest
+  test_coverage: SimpleCov
+  asset_pipeline: Propshaft
+  template_engine: ERB
+  form_builder: Simple Form
+  mailer: Action Mailer
+  caching: Rails built-in caching
+  javascript: Importmaps + Hotwire only
+  css: Plain CSS (no Tailwind)
+  pagination: Pagy
+
+rules:
+  - name: authentication
+    description: Use Rails built-in authentication
+    check:
+      - file: config/application.rb
+        contains: "config.autoload_lib(ignore: %w(assets tasks))"
+      - file: app/models/user.rb
+        exists: true
+      - file: app/controllers/sessions_controller.rb
+        exists: true
+
+  - name: real_time
+    description: Use Hotwire for real-time features
+    check:
+      - file: Gemfile
+        contains: "turbo-rails"
+        contains: "stimulus-rails"
+      - file: app/javascript/controllers
+        exists: true
+      - file: config/importmap.rb
+        exists: true
+
+  - name: javascript
+    description: Use Rails default JavaScript setup
+    check:
+      - file: Gemfile
+        not_contains: "webpacker"
+        not_contains: "esbuild"
+        not_contains: "vite"
+        not_contains: "tailwindcss"
+      - file: config/importmap.rb
+        exists: true
+      - file: app/javascript/application.js
+        exists: true
+      - file: app/javascript/controllers
+        exists: true
+
+  - name: css
+    description: Use Rails default CSS setup
+    check:
+      - file: Gemfile
+        not_contains: "tailwindcss"
+      - file: app/assets/stylesheets/application.css
+        exists: true
+
+  - name: background_jobs
+    description: Use Rails default background job setup
+    check:
+      - file: Gemfile
+        contains: "solid_queue"
+      - file: app/jobs
+        exists: true
+      - file: config/application.rb
+        contains: "config.active_job.queue_adapter = :solid_queue"
+
+  - name: testing
+    description: Use Rails default testing setup
+    check:
+      - file: test
+        exists: true
+      - file: test/test_helper.rb
+        exists: true
+      - file: test/application_system_test_case.rb
+        exists: true
+
+  - name: database
+    description: Use PostgreSQL with Rails conventions
+    check:
+      - file: Gemfile
+        contains: "pg"
+        not_contains: "sqlite3"
+      - file: config/database.yml
+        contains: "adapter: postgresql"
+        contains: "encoding: unicode"
+        contains: "pool: <%= ENV.fetch(\"RAILS_MAX_THREADS\") { 5 } %>"
+      - file: db/schema.rb
+        exists: true
+      - file: config/initializers/postgresql.rb
+        exists: true
+      - file: .env
+        contains: "DATABASE_URL"
+      - file: .env.development
+        contains: "DATABASE_URL"
+      - file: .env.test
+        contains: "DATABASE_URL"
+
+  - name: asset_pipeline
+    description: Use Rails default asset pipeline
+    check:
+      - file: config/application.rb
+        contains: "config.assets.compile = true"
+      - file: app/assets
+        exists: true
+
+  - name: form_builder
+    description: Use Simple Form with Rails conventions
+    check:
+      - file: Gemfile
+        contains: "simple_form"
+      - file: app/views/shared
+        exists: true
+      - file: app/views/shared/_form_errors.html.erb
+        exists: true
+
+  - name: mailer
+    description: Use Rails default mailer setup
+    check:
+      - file: app/mailers
+        exists: true
+      - file: app/views/layouts/mailer.html.erb
+        exists: true
+
+  - name: caching
+    description: Use Rails default caching
+    check:
+      - file: config/environments/production.rb
+        contains: "config.cache_store"
+
+  - name: routing
+    description: Follow Rails routing conventions
+    check:
+      - file: config/routes.rb
+        exists: true
+      - file: app/controllers/application_controller.rb
+        exists: true
+
+  - name: models
+    description: Follow Rails model conventions
+    check:
+      - file: app/models
+        exists: true
+      - file: app/models/application_record.rb
+        exists: true
+
+  - name: controllers
+    description: Follow Rails controller conventions
+    check:
+      - file: app/controllers
+        exists: true
+      - file: app/controllers/application_controller.rb
+        exists: true
+
+  - name: views
+    description: Follow Rails view conventions
+    check:
+      - file: app/views
+        exists: true
+      - file: app/views/layouts/application.html.erb
+        exists: true
+
+  - name: pagination
+    description: Use Pagy for pagination
+    check:
+      - file: Gemfile
+        contains: "pagy"
+      - file: app/controllers/application_controller.rb
+        contains: "include Pagy::Backend"
+      - file: app/helpers/application_helper.rb
+        contains: "include Pagy::Frontend"
+      - file: config/initializers/pagy.rb
+        exists: true
+      - file: app/views/layouts/application.html.erb
+        contains: "pagy_nav"
+
+  - name: test_coverage
+    description: Use SimpleCov for test coverage tracking
+    check:
+      - file: Gemfile
+        contains: "simplecov"
+      - file: test/test_helper.rb
+        contains: "require 'simplecov'"
+        contains: "SimpleCov.start"
+      - file: .simplecov
+        exists: true
+      - file: .gitignore
+        contains: "coverage" 
